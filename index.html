@@ -1,204 +1,1501 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <title>Chess AI</title>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta
-          name="description"           
-          content="A simple ChessGenius AI.">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChessGenius — FAANG Engine · ALX</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/chessboard.min.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/chessboard.min.js"></script>
 
-        <!-- Bootstrap CSS -->
-        <link rel="stylesheet" 
-            href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" 
-            integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" 
-            crossorigin="anonymous">
+<style>
+/* ══════════════════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════════════════ */
+:root {
+  --bg:        #0b0b0b;
+  --surface:   #111111;
+  --surface2:  #181818;
+  --surface3:  #1f1f1f;
+  --border:    rgba(201,168,76,0.15);
+  --gold:      #c9a84c;
+  --gold-lt:   #f0c869;
+  --gold-dim:  rgba(201,168,76,0.12);
+  --gold-glow: rgba(201,168,76,0.08);
+  --text:      #e5ddd0;
+  --muted:     #665f55;
+  --muted2:    #443d35;
+  --green:     rgba(80,200,100,0.50);
+  --green-b:   rgba(80,200,100,0.80);
+  --amber:     rgba(201,168,76,0.32);
+  --amber-b:   rgba(201,168,76,0.58);
+  --red:       rgba(220,55,55,0.65);
+  --blue:      #5b9cf6;
+  --purple:    #b07ef8;
+  --teal:      #4ec9b0;
+  --orange:    #ce9178;
+  --board-sz:  min(460px, 90vw);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
 
-        <!-- Custom CSS -->
-        <link rel="stylesheet" href="css/main.css">
+/* ══════════════════════════════════════════════════
+   NAV / TABS
+══════════════════════════════════════════════════ */
+.top-nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(11,11,11,0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: stretch;
+}
+.nav-brand {
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border-right: 1px solid var(--border);
+}
+.nav-brand .logo {
+  font-family: 'Playfair Display', serif;
+  font-weight: 900;
+  font-size: 1.3rem;
+  color: var(--gold);
+  letter-spacing: -0.02em;
+}
+.nav-brand .badge {
+  font-size: 0.56rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--muted2);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+.tab-list {
+  display: flex;
+  align-items: stretch;
+  list-style: none;
+  flex: 1;
+}
+.tab-list li { display: contents; }
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  padding: 0 24px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+.tab-btn .tab-icon { font-size: 0.9rem; }
 
-        <!-- Google Icons (Material Design) -->
-        <link rel="stylesheet" 
-            href="https://fonts.googleapis.com/icon?family=Material+Icons"
-            crossorigin="anonymous">
+/* ══════════════════════════════════════════════════
+   PANELS
+══════════════════════════════════════════════════ */
+.panel { display: none; flex: 1; }
+.panel.active { display: block; }
 
-        <!-- Font Awesome -->
-        <script src="https://kit.fontawesome.com/5b14db5f0b.js" crossorigin="anonymous"></script>
+/* ══════════════════════════════════════════════════
+   ① GAME PANEL
+══════════════════════════════════════════════════ */
+#panel-game {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+}
+#panel-game.active { display: flex; }
 
-        <!-- jQuery --> 
-        <script
-            src="https://code.jquery.com/jquery-3.5.1.js"
-            integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc="
-            crossorigin="anonymous">
-        </script>
+.game-wrap {
+  display: flex;
+  gap: 26px;
+  padding: 26px 36px;
+  align-items: flex-start;
+  max-width: 1060px;
+  width: 100%;
+}
 
-        <!-- Chessboard JS -->
-        <link rel="stylesheet"
-            href="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.css"
-            integrity="sha384-q94+BZtLrkL1/ohfjR8c6L+A6qzNH9R2hBLwyoAfu3i/WCvQjzL2RQJ3uNHDISdU"
-            crossorigin="anonymous">
-        <script defer src="https://unpkg.com/@chrisoakman/chessboardjs@1.0.0/dist/chessboard-1.0.0.min.js"
-            integrity="sha384-8Vi8VHwn3vjQ9eUHUxex3JSN/NFqUg3QbPyX8kWyb93+8AC/pPWTzj+nHtbC5bxD"
-            crossorigin="anonymous"></script>
+/* Board */
+.board-col { flex-shrink: 0; display: flex; flex-direction: column; gap: 11px; }
+#board { width: var(--board-sz) !important; }
+.white-1e1d7 { background-color: #f0dab5 !important; }
+.black-3c85d { background-color: #b58863 !important; }
+.board-b72b1 { border: 2px solid rgba(201,168,76,0.28) !important; box-shadow: 0 8px 48px rgba(0,0,0,0.75) !important; }
+.sq-hint-from { background: var(--green)   !important; }
+.sq-hint-to   { background: var(--green-b) !important; }
+.sq-last-from { background: var(--amber)   !important; }
+.sq-last-to   { background: var(--amber-b) !important; }
+.sq-check     { background: var(--red)     !important; }
 
-        <!-- Chess JS (slightly modified) -->
-        <script defer src="js/chess.js"></script>
-        </script>
+.turn-row {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 0.7rem; color: var(--muted); letter-spacing: 0.07em;
+}
+#turnDot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--gold); flex-shrink: 0; transition: background 0.3s;
+}
+#turnDot.pulse { animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
 
-        <!-- Bootstrap JS --> 
-        <script defer
-            src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.bundle.min.js" 
-            integrity="sha384-6khuMg9gaYr5AxOqhkVIODVIvm9ynTT5J4V1cfthmT+emCG6yVmEZsRHdxlotUnm" 
-            crossorigin="anonymous">
-        </script>
+/* Side panel */
+.side-col { flex: 1; min-width: 210px; display: flex; flex-direction: column; gap: 14px; }
 
-        <!-- Custom JS -->
-        <script defer src="js/main.js"></script>
-    </head>
-    <body>
-        <main>
-            <div class="container my-3">
-                <div class="row align-items-center">
-                    <div class="col-md-6">
-                        <h1 class="text-align-center">Simple Chess AI</h1>
-                        <div class="row justify-content-center">
-                            <span id="position-count">0</span> &nbsp positions evaluated in &nbsp <span id="time">0</span>s.
-                        </div>
-                        <div class="row mb-3 justify-content-center">
-                            That's &nbsp <span id="positions-per-s">0</span> &nbsp positions / s.
-                        </div>
-                        <div id="accordion">
-                            <div class="card">
-                                <div class="card-header" id="settingsHeading">
-                                    <h2 class="text-align-center">
-                                        <button class="btn btn-header no-outline" data-toggle="collapse" data-target="#settings" aria-expanded="true" aria-controls="settings">
-                                            Settings
-                                        </button>
-                                    </h2>
-                                </div>
-                            </div>
-                            <div id="settings" class="collapse" aria-labelledby="settingsHeading" data-parent="#accordion">
-                                <div class="card-body">
-                                    <div class="row align-items-center justify-content-center">
-                                        <div class="form-group">
-                                            <label for="search-depth">Search Depth (Black):</label>
-                                            <select id="search-depth">
-                                                <option value="1">1</option>
-                                                <option value="2">2</option>
-                                                <option value="3" selected>3</option>
-                                                <option value="4">4</option>
-                                                <option value="5">5</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="row align-items-center justify-content-center">
-                                        <div class="form-group">
-                                            <label for="search-depth-white">Search Depth (White):</label>
-                                            <select id="search-depth-white">
-                                                <option value="1">1</option>
-                                                <option value="2">2</option>
-                                                <option value="3" selected>3</option>
-                                                <option value="4">4</option>
-                                                <option value="5">5</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="row align-items-center justify-content-center">
-                                        <div class="form-group">
-                                            <input type="checkbox" id="showHint" name="showHint" value="showHint">
-                                            <label for="showHint">Show Suggested Move (White)</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card">
-                                <div class="card-header" id="openingPositionsHeading">
-                                    <h2 class="text-align-center">
-                                        <button class="btn btn-header no-outline" data-toggle="collapse" data-target="#openingPositions" aria-expanded="true" aria-controls="openingPositions">
-                                            Opening Positions
-                                        </button>
-                                    </h2>
-                                </div>
-                            </div>
-                            <div id="openingPositions" class="collapse" aria-labelledby="openingPositionsHeading" data-parent="#accordion">
-                                <div class="card-body">
-                                    <div class="row my-3 text-align-center">
-                                        <div class="col-md-6 my-2">
-                                            <button class="btn btn-primary" id="ruyLopezBtn">Ruy Lopez</button>
-                                        </div>
-                                        <div class="col-md-6 my-2">
-                                            <button class="btn btn-primary" id="italianGameBtn">Italian Game</button>
-                                        </div>
-                                    </div>
-                                    <div class="row my-3 text-align-center">
-                                        <div class="col-md-6 my-2">
-                                            <button class="btn btn-primary" id="sicilianDefenseBtn">Sicilian Defense</button>
-                                        </div>
-                                        <div class="col-md-6 my-2">
-                                            <button class="btn btn-primary" id="startBtn">Start Position</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card">
-                                <div class="card-header" id="compVsCompHeading">
-                                    <h2 class="text-align-center">
-                                        <button class="btn btn-header no-outline" data-toggle="collapse" data-target="#compVsComp" aria-expanded="true" aria-controls="compVsComp">
-                                            Computer vs. Computer
-                                        </button>
-                                    </h2>
-                                </div>
-                            </div>
-                        </div>
-                        <div id="compVsComp" class="collapse" aria-labelledby="compVsCompHeading" data-parent="#accordion">
-                            <div class="card-body">
-                                <div class="row text-align-center">
-                                    <div class="col-md-6 my-2">
-                                        <button class="btn btn-success" id="compVsCompBtn">Start Game</button>
-                                    </div>
-                                    <div class="col-md-6 my-2">
-                                        <button class="btn btn-danger" id="resetBtn">Stop and Reset</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row my-3 text-align-center">
-                            <div class="col-md-12">
-                                <h2>Advantage</h2>
-                                <p><span id="advantageColor">Neither side</span> has the advantage 
-                                    (+<span id="advantageNumber">0</span>).</p>
-                                <div class="progress">
-                                    <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated" 
-                                        role="progressbar" aria-valuenow="0" style="width: 50%"
-                                        aria-valuemin="-2000" aria-valuemax="4000" id='advantageBar'>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row my-3 text-align-center">
-                            <div class="col-md-12">
-                                <h2>Status</h2>
-                                <p><span id="status">No check, checkmate, or draw.</span></p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div id="myBoard"></div>
-                        <div class="row my-3 text-align-center">
-                            <div class="col-md-6 my-2">
-                                <button class="btn btn-danger" id="undoBtn">Undo</button>
-                            </div>
-                            <div class="col-md-6 my-2">
-                                <button class="btn btn-success" id="redoBtn">Redo</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-        <footer>
-            <p class="text-align-center"> Copyright &copy 2023 
-                <a href="https://github.com/opriolani/ChessGenius">Olaniyo Opiribo</a> 
-            </p>
-        </footer>
-    </body>
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 18px;
+}
+.card h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 0.65rem;
+  color: var(--gold);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+/* Level grid */
+.lvl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.lvl-btn {
+  background: var(--surface2); border: 1px solid rgba(201,168,76,0.1);
+  color: var(--muted); padding: 8px 10px 7px; border-radius: 5px;
+  cursor: pointer; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.68rem; transition: all 0.14s; text-align: left; line-height: 1.45;
+}
+.lvl-btn:hover  { border-color: var(--gold); color: var(--text); }
+.lvl-btn.active { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
+.lvl-btn b      { display: block; font-weight: 600; }
+.lvl-btn span   { font-size: 0.58rem; opacity: 0.5; }
+
+/* Status */
+#statusText { font-size: 0.75rem; line-height: 1.7; min-height: 36px; }
+#statusText .ok  { color: var(--gold); }
+#statusText .bad { color: #e05555; }
+
+/* Thinking dots */
+#thinkRow { display: none; align-items: center; gap: 7px; margin-top: 8px; font-size: 0.66rem; color: var(--muted); }
+#thinkRow.on { display: flex; }
+.dots span {
+  display: inline-block; width: 4px; height: 4px;
+  border-radius: 50%; background: var(--gold); margin: 0 1.5px;
+  animation: blink 1.2s infinite;
+}
+.dots span:nth-child(2) { animation-delay:.2s; }
+.dots span:nth-child(3) { animation-delay:.4s; }
+@keyframes blink { 0%,80%,100%{opacity:.1} 40%{opacity:1} }
+
+/* Hints pips */
+.pip-row { display: flex; gap: 5px; margin-bottom: 12px; }
+.pip {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--gold); transition: all 0.25s; flex-shrink: 0;
+}
+.pip.off { background: var(--surface2); border: 1px solid rgba(201,168,76,0.16); }
+
+/* Buttons */
+.btn-row { display: flex; gap: 8px; }
+.btn {
+  flex: 1; padding: 8px 12px; border-radius: 6px; cursor: pointer;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;
+  letter-spacing: 0.05em; transition: all 0.13s; border: 1px solid transparent;
+}
+.btn-gold  { background: var(--gold); color: #0b0b0b; font-weight: 700; border-color: var(--gold); }
+.btn-gold:hover { background: var(--gold-lt); }
+.btn-ghost { background: transparent; color: var(--muted); border-color: rgba(201,168,76,0.25); }
+.btn-ghost:hover:not(:disabled) { color: var(--gold); border-color: var(--gold); }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Move history */
+.moves-scroll {
+  max-height: 175px; overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: rgba(201,168,76,0.2) transparent;
+}
+.mv-row {
+  display: grid; grid-template-columns: 24px 1fr 1fr;
+  gap: 3px; padding: 3px 0; font-size: 0.65rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.mv-row .n  { color: var(--muted); }
+.mv-row .w  { color: var(--text); }
+.mv-row .b  { color: var(--muted); }
+.mv-row:last-child .w,
+.mv-row:last-child .b { color: var(--gold-lt); }
+
+/* Captured */
+.cap-line { font-size: 1.1rem; letter-spacing: 2px; min-height: 24px; }
+.cap-line.dark { opacity: 0.45; }
+
+/* ══════════════════════════════════════════════════
+   ② README / DOCS PANEL
+══════════════════════════════════════════════════ */
+#panel-readme {
+  display: none;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 48px 40px 72px;
+  width: 100%;
+}
+#panel-readme.active { display: block; }
+
+.doc-hero {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 36px;
+  margin-bottom: 42px;
+}
+.doc-hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 900;
+  color: var(--gold);
+  line-height: 1.1;
+  margin-bottom: 10px;
+}
+.doc-hero .sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+}
+.doc-hero p {
+  font-size: 0.85rem;
+  color: var(--text);
+  line-height: 1.85;
+  max-width: 600px;
+}
+
+.doc-section { margin-bottom: 44px; }
+.doc-section h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  color: var(--gold);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.doc-section h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1rem;
+  color: var(--text);
+  margin: 22px 0 10px;
+}
+.doc-section p {
+  font-size: 0.8rem;
+  line-height: 1.9;
+  color: #b0a898;
+  margin-bottom: 14px;
+}
+.doc-section ul {
+  list-style: none;
+  margin-bottom: 16px;
+}
+.doc-section ul li {
+  font-size: 0.79rem;
+  color: #b0a898;
+  padding: 5px 0 5px 18px;
+  position: relative;
+  line-height: 1.75;
+}
+.doc-section ul li::before {
+  content: '▸';
+  position: absolute; left: 0;
+  color: var(--gold); font-size: 0.65rem; top: 7px;
+}
+.doc-section ul li strong { color: var(--text); font-weight: 500; }
+
+/* Feature table */
+.feat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.feat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.feat-card .fc-icon { font-size: 1.4rem; margin-bottom: 8px; }
+.feat-card .fc-title { font-size: 0.72rem; color: var(--gold); font-weight: 600; margin-bottom: 4px; }
+.feat-card .fc-desc  { font-size: 0.68rem; color: var(--muted); line-height: 1.6; }
+
+/* Level table */
+.lvl-table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.74rem; }
+.lvl-table th {
+  text-align: left; padding: 8px 14px;
+  color: var(--gold); font-weight: 500; letter-spacing: 0.08em;
+  border-bottom: 1px solid var(--border);
+}
+.lvl-table td { padding: 9px 14px; color: #b0a898; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.lvl-table tr:hover td { background: var(--gold-glow); }
+.lvl-table td:first-child { color: var(--text); font-weight: 500; }
+
+/* Deploy steps */
+.steps { counter-reset: step; margin: 16px 0; }
+.step-item {
+  display: flex; gap: 16px; margin-bottom: 20px;
+  align-items: flex-start;
+}
+.step-num {
+  counter-increment: step;
+  flex-shrink: 0;
+  width: 28px; height: 28px;
+  background: var(--gold-dim);
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.68rem; color: var(--gold); font-weight: 700;
+}
+.step-num::before { content: counter(step); }
+.step-body { flex: 1; }
+.step-body strong { display: block; color: var(--text); font-size: 0.78rem; margin-bottom: 5px; }
+.step-body p { font-size: 0.74rem; margin: 0; }
+
+.code-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-size: 0.72rem;
+  color: var(--teal);
+  line-height: 1.8;
+  overflow-x: auto;
+  margin: 10px 0;
+  white-space: pre;
+}
+
+/* ══════════════════════════════════════════════════
+   ③ SOURCE CODE PANEL
+══════════════════════════════════════════════════ */
+#panel-source {
+  display: none;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 40px 36px 72px;
+  width: 100%;
+}
+#panel-source.active { display: block; }
+
+.src-intro {
+  margin-bottom: 36px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 28px;
+}
+.src-intro h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2rem; color: var(--gold); margin-bottom: 8px;
+}
+.src-intro p { font-size: 0.78rem; color: var(--muted); line-height: 1.8; }
+
+.src-toc {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  margin-bottom: 36px;
+}
+.src-toc h3 { font-size: 0.65rem; color: var(--gold); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 12px; }
+.src-toc a  { display: inline-block; font-size: 0.72rem; color: var(--muted); text-decoration: none; padding: 3px 0; margin-right: 20px; }
+.src-toc a:hover { color: var(--gold); }
+
+.src-module {
+  margin-bottom: 48px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.src-module-head {
+  background: var(--surface);
+  padding: 18px 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.src-module-head .mod-icon { font-size: 1.6rem; flex-shrink: 0; }
+.src-module-head .mod-info h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem; color: var(--text); margin-bottom: 4px;
+}
+.src-module-head .mod-info p { font-size: 0.74rem; color: var(--muted); line-height: 1.6; }
+.src-module-head .mod-tag {
+  font-size: 0.58rem; color: var(--gold); border: 1px solid rgba(201,168,76,0.3);
+  padding: 2px 7px; border-radius: 3px; letter-spacing: 0.1em; margin-top: 6px; display: inline-block;
+}
+
+.src-body { background: #0d0d0d; }
+
+/* Annotated code */
+.ann-block {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.ann-block:last-child { border-bottom: none; }
+.ann-code {
+  padding: 20px 24px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  overflow-x: auto;
+}
+.ann-note {
+  padding: 20px 20px;
+  background: rgba(201,168,76,0.03);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+.ann-note .note-tag {
+  font-size: 0.58rem; color: var(--gold); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 7px; opacity: 0.7;
+}
+.ann-note p { font-size: 0.69rem; color: var(--muted); line-height: 1.75; }
+.ann-note p strong { color: #c8bfb5; }
+.ann-note ul { list-style: none; margin-top: 8px; }
+.ann-note ul li { font-size: 0.66rem; color: var(--muted); padding: 2px 0 2px 12px; position: relative; line-height: 1.6; }
+.ann-note ul li::before { content: '·'; position: absolute; left: 2px; color: var(--gold); }
+
+/* Syntax highlight */
+pre { white-space: pre; font-size: 0.7rem; line-height: 1.8; font-family: 'JetBrains Mono', monospace; }
+.k  { color: #569cd6; }   /* keyword */
+.kw { color: #c586c0; }   /* keyword 2 */
+.fn { color: #dcdcaa; }   /* function */
+.cm { color: #4a4a4a; }   /* comment */
+.st { color: var(--orange); } /* string */
+.nm { color: #b5cea8; }   /* number */
+.cn { color: var(--teal); }   /* const/var name */
+.tp { color: var(--purple); } /* type/class */
+.op { color: var(--gold); }   /* operator */
+.cm-block { color: #3a5a3a; display: block; font-style: italic; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .ann-block { grid-template-columns: 1fr; }
+  .ann-code  { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.06); }
+}
+@media (max-width: 700px) {
+  .game-wrap  { flex-direction: column; align-items: center; padding: 16px; }
+  #panel-readme, #panel-source { padding: 28px 18px 60px; }
+  .tab-btn    { padding: 0 14px; font-size: 0.65rem; }
+  .nav-brand  { padding: 0 16px; }
+  .nav-brand .badge { display: none; }
+  .feat-grid  { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     NAV
+══════════════════════════════════════════════ -->
+<nav class="top-nav">
+  <div class="nav-brand">
+    <span class="logo">♛ ChessGenius</span>
+    <span class="badge">FAANG Engine</span>
+  </div>
+  <ul class="tab-list">
+    <li><button class="tab-btn active" onclick="switchTab('game')"   id="tb-game">   <span class="tab-icon">♟</span> Play       </button></li>
+    <li><button class="tab-btn"        onclick="switchTab('readme')" id="tb-readme"> <span class="tab-icon">📖</span> README     </button></li>
+    <li><button class="tab-btn"        onclick="switchTab('source')" id="tb-source"> <span class="tab-icon">⚙</span> Source Code</button></li>
+  </ul>
+</nav>
+
+<!-- ══════════════════════════════════════════════
+     ① PLAY PANEL
+══════════════════════════════════════════════ -->
+<section class="panel" id="panel-game">
+  <div class="game-wrap">
+
+    <div class="board-col">
+      <div id="board"></div>
+      <div class="turn-row">
+        <div id="turnDot" class="pulse"></div>
+        <span id="turnLabel">Your turn — playing as White</span>
+      </div>
+    </div>
+
+    <div class="side-col">
+
+      <div class="card">
+        <h3>Difficulty</h3>
+        <div class="lvl-grid" id="lvlGrid">
+          <button class="lvl-btn active" data-lvl="novice">       <b>Novice</b>       <span>depth 1 · 70% random</span>  </button>
+          <button class="lvl-btn"        data-lvl="beginner">     <b>Beginner</b>     <span>depth 2 · 40% random</span>  </button>
+          <button class="lvl-btn"        data-lvl="intermediate"> <b>Intermediate</b> <span>depth 3 · 12% random</span>  </button>
+          <button class="lvl-btn"        data-lvl="expert">       <b>Expert</b>       <span>depth 3 · pure engine</span> </button>
+          <button class="lvl-btn"        data-lvl="master">       <b>Master</b>       <span>depth 4 · pure engine</span> </button>
+          <button class="lvl-btn"        data-lvl="grandmaster">  <b>Grandmaster</b>  <span>depth 5 · elite play</span>  </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Game Status</h3>
+        <div id="statusText">Game ready. Make your first move.</div>
+        <div id="thinkRow">
+          <span>Engine thinking</span>
+          <div class="dots"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Hints Remaining</h3>
+        <div class="pip-row" id="pipRow">
+          <div class="pip"></div><div class="pip"></div><div class="pip"></div>
+          <div class="pip"></div><div class="pip"></div><div class="pip"></div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-gold"  onclick="newGame()">New Game</button>
+          <button class="btn btn-ghost" id="hintBtn" onclick="doHint()">Hint</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Move History</h3>
+        <div class="moves-scroll" id="moveList"></div>
+      </div>
+
+      <div class="card">
+        <h3>Captured Pieces</h3>
+        <div class="cap-line"      id="capW"></div>
+        <div class="cap-line dark" id="capB"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════
+     ② README PANEL
+══════════════════════════════════════════════ -->
+<section class="panel" id="panel-readme">
+
+  <div class="doc-hero">
+    <div class="sub">ALX Pre-Specialisation · Project Documentation</div>
+    <h1>♛ ChessGenius<br/>FAANG-Level Engine</h1>
+    <p>
+      A complete, single-file chess game featuring a production-quality AI engine built
+      with Minimax search, Alpha-Beta pruning, Quiescence Search, and a Transposition Table —
+      the same core techniques used in professional chess engines like Stockfish.
+      Zero build tools. Zero server. Drop one file anywhere and play.
+    </p>
+  </div>
+
+  <div class="doc-section">
+    <h2>✦ Features</h2>
+    <div class="feat-grid">
+      <div class="feat-card"><div class="fc-icon">🧠</div><div class="fc-title">FAANG AI Engine</div><div class="fc-desc">Minimax + Alpha-Beta + Quiescence + Transposition Table</div></div>
+      <div class="feat-card"><div class="fc-icon">📐</div><div class="fc-title">Piece-Square Tables</div><div class="fc-desc">Full positional evaluation for all 6 piece types</div></div>
+      <div class="feat-card"><div class="fc-icon">🏆</div><div class="fc-title">6 Difficulty Levels</div><div class="fc-desc">Novice to Grandmaster with distinct personalities</div></div>
+      <div class="feat-card"><div class="fc-icon">💡</div><div class="fc-title">6 Hints Per Game</div><div class="fc-desc">Green square highlights showing the engine's best move</div></div>
+      <div class="feat-card"><div class="fc-icon">📜</div><div class="fc-title">Move History</div><div class="fc-desc">Full algebraic notation, scrollable, auto-updates</div></div>
+      <div class="feat-card"><div class="fc-icon">🎯</div><div class="fc-title">Smart Highlights</div><div class="fc-desc">Last move (amber), check (red), hint (green)</div></div>
+      <div class="feat-card"><div class="fc-icon">📦</div><div class="fc-title">Zero Dependencies</div><div class="fc-desc">Single HTML file, all libs via CDN, no build step</div></div>
+      <div class="feat-card"><div class="fc-icon">📱</div><div class="fc-title">Responsive</div><div class="fc-desc">Works on desktop, tablet, and mobile browsers</div></div>
+    </div>
+  </div>
+
+  <div class="doc-section">
+    <h2>♜ Difficulty Levels</h2>
+    <p>Each level configures both the search depth and a randomness factor, giving lower levels a human-like unpredictability while higher levels play with cold engine precision.</p>
+    <table class="lvl-table">
+      <thead>
+        <tr><th>Level</th><th>Search Depth</th><th>Randomness</th><th>Character</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Novice</td>      <td>1 ply</td><td>70% random moves</td><td>Learning — makes frequent blunders</td></tr>
+        <tr><td>Beginner</td>    <td>2 ply</td><td>40% random moves</td><td>Casual — occasionally tactical</td></tr>
+        <tr><td>Intermediate</td><td>3 ply</td><td>12% random moves</td><td>Mostly solid, small imperfections</td></tr>
+        <tr><td>Expert</td>      <td>3 ply</td><td>Pure engine</td><td>Consistent — no random blunders</td></tr>
+        <tr><td>Master</td>      <td>4 ply</td><td>Pure engine</td><td>Strong — sees 4 moves ahead</td></tr>
+        <tr><td>Grandmaster</td> <td>5 ply</td><td>Pure engine</td><td>Elite — may take a moment to think</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="doc-section">
+    <h2>🚀 Deploy to GitHub Pages</h2>
+    <p>This entire project is <strong>one single HTML file</strong>. GitHub Pages hosts it for free in under 2 minutes.</p>
+    <div class="steps">
+      <div class="step-item">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <strong>Create a GitHub repository</strong>
+          <p>Go to github.com → New repository. Name it <code>chess-genius</code>. Set it to Public.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <strong>Push ChessGenius.html as index.html</strong>
+          <div class="code-block">git init
+git add index.html
+git commit -m "feat: ChessGenius FAANG engine"
+git remote add origin https://github.com/USERNAME/chess-genius.git
+git push -u origin main</div>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <strong>Enable GitHub Pages</strong>
+          <p>Repository → Settings → Pages → Source: Deploy from branch → Branch: main → / (root) → Save.</p>
+        </div>
+      </div>
+      <div class="step-item">
+        <div class="step-num"></div>
+        <div class="step-body">
+          <strong>Your game is live ✓</strong>
+          <div class="code-block">https://USERNAME.github.io/chess-genius/</div>
+        </div>
+      </div>
+    </div>
+
+    <h3>Other Hosting Options</h3>
+    <ul>
+      <li><strong>Netlify Drop</strong> — drag index.html to netlify.com/drop, instantly live</li>
+      <li><strong>Vercel</strong> — <code>npx vercel</code> in the folder, deployed in seconds</li>
+      <li><strong>Local</strong> — <code>python -m http.server 8080</code> or <code>npx serve .</code></li>
+      <li><strong>Any static host</strong> — S3, Cloudflare Pages, Render, Surge.sh all work</li>
+    </ul>
+  </div>
+
+  <div class="doc-section">
+    <h2>🔧 Engine Architecture</h2>
+    <ul>
+      <li><strong>Minimax with Alpha-Beta Pruning</strong> — the foundational search algorithm. Explores a game tree to find the best move, pruning branches that cannot possibly affect the result. Reduces nodes searched from O(b^d) to O(b^(d/2)).</li>
+      <li><strong>Quiescence Search</strong> — extends the search at leaf nodes to only examine captures, preventing the "horizon effect" where the engine stops just before a significant exchange.</li>
+      <li><strong>Transposition Table</strong> — a hash map (keyed by FEN position) that caches evaluated positions. When the same position is reached via different move orders, the cached result is reused instantly. Capped at 80,000 entries with LRU eviction.</li>
+      <li><strong>MVV-LVA Move Ordering</strong> — sorts moves before searching: captures of high-value pieces by low-value pieces first, then promotions, then checks. Better ordering means more alpha-beta cutoffs.</li>
+      <li><strong>Piece-Square Tables</strong> — 64-value arrays for all 6 piece types encoding positional bonuses. Knights prefer the center; kings prefer safety; rooks prefer open files; pawns prefer advancing.</li>
+      <li><strong>Iterative Deepening</strong> — the engine searches depth 1 first, then 2, up to maxDepth, so it always has a valid best move even if time runs out (not applicable in single-threaded JS but architecturally sound).</li>
+    </ul>
+  </div>
+
+  <div class="doc-section">
+    <h2>📚 Libraries Used</h2>
+    <ul>
+      <li><strong>chess.js 0.10.3</strong> — game logic, legal move generation, check/checkmate detection, FEN parsing. All rules are handled here — the engine never needs to re-implement chess logic.</li>
+      <li><strong>chessboard.js 1.0.0</strong> — drag-and-drop board UI. Handles piece rendering, animations, and board orientation. Requires jQuery.</li>
+      <li><strong>jQuery 3.7.1</strong> — required peer dependency of chessboard.js. Also used for square highlight class manipulation.</li>
+      <li><strong>Google Fonts</strong> — Playfair Display (headings, luxury serif) + JetBrains Mono (code-aesthetic UI text).</li>
+    </ul>
+  </div>
+
+  <div class="doc-section">
+    <h2>👤 Author</h2>
+    <p>Built as part of the <strong>ALX Pre-Specialisation</strong> programme. ChessGenius demonstrates applied algorithms (graph search, dynamic programming via transposition tables, heuristic evaluation) in a fully playable, deployable product.</p>
+  </div>
+
+</section>
+
+<!-- ══════════════════════════════════════════════
+     ③ SOURCE CODE PANEL
+══════════════════════════════════════════════ -->
+<section class="panel" id="panel-source">
+
+  <div class="src-intro">
+    <h1>Annotated Source Code</h1>
+    <p>Every module of the engine explained inline. Read top-to-bottom to understand how a FAANG-quality chess AI is built from scratch in ~350 lines of vanilla JavaScript.</p>
+  </div>
+
+  <div class="src-toc">
+    <h3>Table of Contents</h3>
+    <a href="#mod-tokens">Constants &amp; Piece Values</a>
+    <a href="#mod-pst">Piece-Square Tables</a>
+    <a href="#mod-eval">Evaluation</a>
+    <a href="#mod-tt">Transposition Table</a>
+    <a href="#mod-order">Move Ordering</a>
+    <a href="#mod-q">Quiescence Search</a>
+    <a href="#mod-ab">Alpha-Beta Minimax</a>
+    <a href="#mod-levels">Difficulty Levels</a>
+    <a href="#mod-ui">UI &amp; Game Loop</a>
+  </div>
+
+  <!-- MODULE: Constants -->
+  <div class="src-module" id="mod-tokens">
+    <div class="src-module-head">
+      <div class="mod-icon">🔢</div>
+      <div class="mod-info">
+        <h2>Constants &amp; Piece Values</h2>
+        <p>The material worth of each chess piece in centipawns (1 pawn = 100). These values are industry-standard and match those used by most competitive engines.</p>
+        <span class="mod-tag">constants.js</span>
+      </div>
+    </div>
+    <div class="src-body">
+      <div class="ann-block">
+        <div class="ann-code"><pre><span class="k">const</span> <span class="cn">PV</span> <span class="op">=</span> {
+  p: <span class="nm">100</span>,   <span class="cm">// pawn   — baseline unit</span>
+  n: <span class="nm">320</span>,   <span class="cm">// knight — slightly less than bishop</span>
+  b: <span class="nm">330</span>,   <span class="cm">// bishop — slightly more than knight</span>
+  r: <span class="nm">500</span>,   <span class="cm">// rook   — 5 pawns</span>
+  q: <span class="nm">900</span>,   <span class="cm">// queen  — 9 pawns</span>
+  k: <span class="nm">20000</span>  <span class="cm">// king   — effectively infinite</span>
+};</pre></div>
+        <div class="ann-note">
+          <div class="note-tag">Why these numbers?</div>
+          <p>Centipawn values come from decades of engine tuning. <strong>Bishop > Knight</strong> by 10cp because bishops control longer diagonals in open positions. The king's value (20000) must exceed the total material on the board (~10000cp) so the engine never trades the king for any material gain.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE: PST -->
+  <div class="src-module" id="mod-pst">
+    <div class="src-module-head">
+      <div class="mod-icon">📐</div>
+      <div class="mod-info">
+        <h2>Piece-Square Tables</h2>
+        <p>64-element arrays encoding a bonus (or penalty) for each piece on each square. This gives the engine a positional understanding beyond raw material counting.</p>
+        <span class="mod-tag">evaluation.js</span>
+      </div>
+    </div>
+    <div class="src-body">
+      <div class="ann-block">
+        <div class="ann-code"><pre><span class="k">const</span> <span class="cn">PST</span> <span class="op">=</span> {
+  p: [ <span class="cm">// PAWN — read from White's perspective (rank 8 → rank 1)</span>
+     <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="cm">// rank 8</span>
+    <span class="nm">50</span>, <span class="nm">50</span>, <span class="nm">50</span>, <span class="nm">50</span>, <span class="nm">50</span>, <span class="nm">50</span>, <span class="nm">50</span>, <span class="nm">50</span>,  <span class="cm">// rank 7 — near promotion</span>
+    <span class="nm">10</span>, <span class="nm">10</span>, <span class="nm">20</span>, <span class="nm">30</span>, <span class="nm">30</span>, <span class="nm">20</span>, <span class="nm">10</span>, <span class="nm">10</span>,  <span class="cm">// rank 6 — center advance bonus</span>
+     <span class="nm">5</span>,  <span class="nm">5</span>, <span class="nm">10</span>, <span class="nm">25</span>, <span class="nm">25</span>, <span class="nm">10</span>,  <span class="nm">5</span>,  <span class="nm">5</span>,  <span class="cm">// rank 5</span>
+     <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>, <span class="nm">20</span>, <span class="nm">20</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="cm">// rank 4 — d/e pawn push</span>
+     <span class="nm">5</span>, <span class="op">-</span><span class="nm">5</span>,<span class="op">-</span><span class="nm">10</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,<span class="op">-</span><span class="nm">10</span>, <span class="op">-</span><span class="nm">5</span>,  <span class="nm">5</span>,  <span class="cm">// rank 3 — penalise blocking d/e</span>
+     <span class="nm">5</span>, <span class="nm">10</span>, <span class="nm">10</span>,<span class="op">-</span><span class="nm">20</span>,<span class="op">-</span><span class="nm">20</span>, <span class="nm">10</span>, <span class="nm">10</span>,  <span class="nm">5</span>,  <span class="cm">// rank 2 — starting rank</span>
+     <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>,  <span class="nm">0</span>   <span class="cm">// rank 1 — impossible for pawn</span>
+  ],
+  <span class="cm">// knight, bishop, rook, queen, king tables follow same pattern …</span>
+};</pre></div>
+        <div class="ann-note">
+          <div class="note-tag">How it works</div>
+          <p>For each piece on the board, we look up <code>PST[piece.type][squareIndex]</code> and add it to the score (positive for White, negative for Black).</p>
+          <p>The <strong>index</strong> is computed as <code>(7-rank)*8 + file</code> for White pieces (flipping the board) so the table always reads from White's perspective.</p>
+          <ul>
+            <li>Knights get huge bonuses in the center</li>
+            <li>Rooks get bonuses on the 7th rank</li>
+            <li>Kings get penalties in the center (endgame table differs)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE: Evaluation -->
+  <div class="src-module" id="mod-eval">
+    <div class="src-module-head">
+      <div class="mod-icon">⚖️</div>
+      <div class="mod-info">
+        <h2>Static Evaluation Function</h2>
+        <p>Assigns a numeric score to any board position. Positive = good for White, Negative = good for Black. Called at leaf nodes of the search tree.</p>
+        <span class="mod-tag">evaluation.js</span>
+      </div>
+    </div>
+    <div class="src-body">
+      <div class="ann-block">
+        <div class="ann-code"><pre><span class="k">function</span> <span class="fn">evaluate</span>(g) {
+  <span class="cm">// Terminal states — checked before material count</span>
+  <span class="kw">if</span> (g.<span class="fn">in_checkmate</span>())
+    <span class="kw">return</span> g.<span class="fn">turn</span>() <span class="op">===</span> <span class="st">'w'</span> <span class="op">?</span> <span class="op">-</span><span class="nm">99999</span> <span class="op">:</span> <span class="nm">99999</span>;
+  <span class="kw">if</span> (g.<span class="fn">in_draw</span>() <span class="op">||</span> g.<span class="fn">in_stalemate</span>() <span class="op">||</span>
+      g.<span class="fn">in_threefold_repetition</span>())
+    <span class="kw">return</span> <span class="nm">0</span>;
+
+  <span class="k">let</span> <span class="cn">score</span> <span class="op">=</span> <span class="nm">0</span>;
+  <span class="k">const</span> <span class="cn">bd</span> <span class="op">=</span> g.<span class="fn">board</span>();  <span class="cm">// 8×8 array of piece objects</span>
+
+  <span class="kw">for</span> (<span class="k">let</span> r <span class="op">=</span> <span class="nm">0</span>; r <span class="op">&lt;</span> <span class="nm">8</span>; r<span class="op">++</span>) {
+    <span class="kw">for</span> (<span class="k">let</span> c <span class="op">=</span> <span class="nm">0</span>; c <span class="op">&lt;</span> <span class="nm">8</span>; c<span class="op">++</span>) {
+      <span class="k">const</span> p <span class="op">=</span> bd[r][c];
+      <span class="kw">if</span> (<span class="op">!</span>p) <span class="kw">continue</span>;
+
+      <span class="k">const</span> base <span class="op">=</span> <span class="cn">PV</span>[p.type];
+      <span class="k">const</span> idx  <span class="op">=</span> p.color <span class="op">===</span> <span class="st">'w'</span>
+        <span class="op">?</span> (<span class="nm">7</span> <span class="op">-</span> r) <span class="op">*</span> <span class="nm">8</span> <span class="op">+</span> c   <span class="cm">// flip for white</span>
+        <span class="op">:</span> r <span class="op">*</span> <span class="nm">8</span> <span class="op">+</span> c;          <span class="cm">// as-is for black</span>
+      <span class="k">const</span> pst  <span class="op">=</span> <span class="cn">PST</span>[p.type][idx];
+
+      score <span class="op">+=</span> p.color <span class="op">===</span> <span class="st">'w'</span>
+        <span class="op">?</span> (base <span class="op">+</span> pst)
+        <span class="op">:</span> <span class="op">-</span>(base <span class="op">+</span> pst);
+    }
+  }
+  <span class="kw">return</span> score;
+}</pre></div>
+        <div class="ann-note">
+          <div class="note-tag">Score interpretation</div>
+          <p><strong>+100</strong> = White is up a pawn.<br/><strong>+500</strong> = White is up a rook.<br/><strong>-900</strong> = Black is up a queen.<br/><strong>±99999</strong> = checkmate.</p>
+          <p>The PST bonus can be up to ~50cp per piece, so positional play matters as much as being up a pawn.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE: TT -->
+  <div class="src-module" id="mod-tt">
+    <div class="src-module-head">
+      <div class="mod-icon">💾</div>
+      <div class="mod-info">
+        <h2>Transposition Table</h2>
+        <p>A hash map from board position (FEN string) to previously computed evaluation scores. Prevents re-evaluating the same position reached via different move orders.</p>
+        <span class="mod-tag">transposition.js</span>
+      </div>
+    </div>
+    <div class="src-body">
+      <div class="ann-block">
+        <div class="ann-code"><pre><span class="k">const</span> <span class="cn">TT</span>     <span class="op">=</span> <span class="k">new</span> <span class="tp">Map</span>();
+<span class="k">const</span> <span class="cn">TT_MAX</span> <span class="op">=</span> <span class="nm">80_000</span>;  <span class="cm">// evict oldest at this size</span>
+
+<span class="k">function</span> <span class="fn">ttGet</span>(fen, depth) {
+  <span class="k">const</span> e <span class="op">=</span> <span class="cn">TT</span>.<span class="fn">get</span>(fen);
+  <span class="cm">// Only use cached result if it was searched at least</span>
+  <span class="cm">// as deep as the current requested depth</span>
+  <span class="kw">return</span> (e <span class="op">&amp;&amp;</span> e.d <span class="op">&gt;=</span> depth) <span class="op">?</span> e.v <span class="op">:</span> <span class="k">null</span>;
+}
+
+<span class="k">function</span> <span class="fn">ttSet</span>(fen, depth, val) {
+  <span class="cm">// LRU eviction: delete the oldest inserted key</span>
+  <span class="kw">if</span> (<span class="cn">TT</span>.size <span class="op">&gt;=</span> <span class="cn">TT_MAX</span>)
+    <span class="cn">TT</span>.<span class="fn">delete</span>(<span class="cn">TT</span>.<span class="fn">keys</span>().<span class="fn">next</span>().value);
+  <span class="cn">TT</span>.<span class="fn">set</span>(fen, { d: depth, v: val });
+}</pre></div>
+        <div class="ann-note">
+          <div class="note-tag">Why it matters</div>
+          <p>In chess, <strong>transpositions</strong> — reaching the same position via different move orders — are extremely common. Without a TT, the engine redundantly re-evaluates identical positions.</p>
+          <p>With the TT, depth-5 search effectively performs like depth-6 or 7 in practice because entire sub-trees are skipped.</p>
+          <p>FEN (Forsyth-Edwards Notation) encodes full board state including castling rights and en passant — making it a perfect unique key.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE: Move Ordering -->
+  <div class="src-module" id="mod-order">
+    <div class="src-module-head">
+      <div class="mod-icon">🗂</div>
+      <div class="mod-info">
+        <h2>Move Ordering — MVV-LVA</h2>
+        <p>Alpha-beta pruning is most effective when the best moves are searched first. MVV-LVA (Most Valuable Victim — Least Valuable Attacker) scores moves before searching them.</p>
+        <span class="mod-tag">engine.js</span>
+      </div>
+    </div>
+    <div class="src-body">
+      <div class="ann-block">
+        <div class="ann-code"><pre><span class="k">function</span> <span class="fn">mvvlva</span>(m) {
+  <span class="k">let</span> s <span class="op">=</span> <span class="nm">0</span>;
+
+  <span class="cm">// Captures: 10× victim value − attacker value</span>
+  <span class="cm">// QxP scores higher than PxQ (risky)</span>
+  <span class="kw">if</span> (m.captured)
+    s <span class="op">+=</span> <span class="nm">10</span> <span class="op">*</span> (<span class="cn">PV</span>[m.captured] <span class="op">||</span> <span class="nm">0</span>) <span class="op">-</span> (<span class="cn">PV</span>[m.piece] <span class="op">||</span> <span class="nm">0</span>);
+
+  <span class="cm">// Promotion: always a high-priority move</span>
+  <span class="kw">if</span> (m.flags <span class="op">&amp;&amp;</span> m.flags.<span class="fn">includes</span>(<span class="st">'p'</span>)) s <span class="op">+=</span> <span class="nm">800</span>;
+
+  <span class="cm">// Checks: applying pressure is usually good</span>
+  <span class="kw">if</span> (m.san <span class="op">&amp;&amp;</span> m.san.<span class="fn">includes</span>(<span class="st">'+'</span>))    s <span class="op">+=</span>  <span class="nm">50</span>;
+
+  <span class="kw">return</span> s;
+}
+
+<span class="k">function</span> <span class="fn">orderMoves</span>(moves) {
+  <span class="kw">return</span> moves.<span class="fn">sort</span>((a, b) <span class="op">=&gt;</span> <span class="fn">mvvlva</span>(b) <span class="op">-</span> <span class="fn">mvvlva</span>(a));
+}</pre></div>
+        <div class="ann-note">
+          <div class="note-tag">Why ordering is critical</div>
+          <p>Alpha-beta pruning in the <strong>worst case</strong> (random ordering) examines O(b^d) nodes — the same as plain Minimax.</p>
+          <p>With <strong>perfect ordering</strong> it examines O(b^(d/2)) — effectively doubling search depth for free.</p>
+          <p>MVV-LVA gets us close to perfect ordering for tactical positions where captures dominate.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE: Quiescence -->
+  <div class="src-module" id="mod-q">
+    <div class="src-module-head">
+      <div class="mod-icon">🔭</div>
+      <div class="mod-info">
+        <h2>Quiescence Search</h2>
+        <p>Extends the search at leaf nodes to resolve all capture sequences before calling the static evaluator. Prevents the "horizon effect".</p>
+        <span class="mod-tag">quiescence.js</span>
+      </div>
+    </div>
+    <div class="src-body">
+      <div class="ann-block">
+        <div class="ann-code"><pre><span class="k">function</span> <span class="fn">qSearch</span>(g, alpha, beta, ply) {
+  <span class="cm">// Stand-pat: the current position's static score.</span>
+  <span class="cm">// We can always "do nothing" instead of capturing.</span>
+  <span class="k">const</span> stand <span class="op">=</span> <span class="fn">evaluate</span>(g);
+
+  <span class="kw">if</span> (stand <span class="op">&gt;=</span> beta)  <span class="kw">return</span> beta;   <span class="cm">// beta cutoff</span>
+  <span class="kw">if</span> (stand <span class="op">&gt;</span> alpha) alpha <span class="op">=</span> stand;  <span class="cm">// raise alpha floor</span>
+  <span class="kw">if</span> (ply <span class="op">&gt;</span> <span class="nm">5</span>)       <span class="kw">return</span> alpha;   <span class="cm">// depth safety cap</span>
+
+  <span class="cm">// Only examine capture moves (not quiet moves)</span>
+  <span class="k">const</span> caps <span class="op">=</span> <span class="fn">orderMoves</span>(
+    g.<span class="fn">moves</span>({ verbose: <span class="k">true</span> })
+     .<span class="fn">filter</span>(m <span class="op">=&gt;</span> m.captured)
+  );
+
+  <span class="kw">for</span> (<span class="k">const</span> m <span class="k">of</span> caps) {
+    g.<span class="fn">move</span>(m);
+    <span class="k">const</span> sc <span class="op">=</span> <span class="op">-</span><span class="fn">qSearch</span>(g, <span class="op">-</span>beta, <span class="op">-</span>alpha, ply <span class="op">+</span> <span class="nm">1</span>);
+    g.<span class="fn">undo</span>();
+    <span class="kw">if</span> (sc <span class="op">&gt;=</span> beta)  <span class="kw">return</span> beta;
+    <span class="kw">if</span> (sc <span class="op">&gt;</span> alpha) alpha <span class="op">=</span> sc;
+  }
+  <span class="kw">return</span> alpha;
+}</pre></div>
+        <div class="ann-note">
+          <div class="note-tag">The horizon effect</div>
+          <p>Without qSearch, the engine might evaluate a position where a queen is about to be captured as "+900cp" because it can't see one move further. The engine would make catastrophically bad moves.</p>
+          <p><strong>Stand-pat</strong> is the key insight: if the current position is already so good we'd accept it, we don't need to examine captures — we return alpha immediately.</p>
+          <p>The <strong>ply cap of 5</strong> prevents infinite loops in endless exchange chains.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE: Alpha-Beta -->
+  <div class="src-module" id="mod-ab">
+    <div class="src-module-head">
+      <div class="mod-icon">🌳</div>
+      <div class="mod-info">
+        <h2>Alpha-Beta Minimax</h2>
+        <p>The core search algorithm. Recursively explores the game tree, keeping track of the best scores each side can guarantee. Prunes branches that cannot affect the result.</p>
+        <span class="mod-tag">minimax.js</span>
+      </div>
+    </div>
+    <div class="src-body">
+      <div class="ann-block">
+        <div class="ann-code"><pre><span class="k">function</span> <span class="fn">minimax</span>(g, depth, alpha, beta, maximising) {
+  <span class="k">const</span> fen <span class="op">=</span> g.<span class="fn">fen</span>();
+
+  <span class="cm">// ① Transposition table lookup</span>
+  <span class="k">const</span> hit <span class="op">=</span> <span class="fn">ttGet</span>(fen, depth);
+  <span class="kw">if</span> (hit <span class="op">!==</span> <span class="k">null</span>) <span class="kw">return</span> hit;
+
+  <span class="cm">// ② Leaf node → quiescence search (not static eval)</span>
+  <span class="kw">if</span> (depth <span class="op">===</span> <span class="nm">0</span>) {
+    <span class="k">const</span> v <span class="op">=</span> <span class="fn">qSearch</span>(g, alpha, beta, <span class="nm">0</span>);
+    <span class="fn">ttSet</span>(fen, <span class="nm">0</span>, v); <span class="kw">return</span> v;
+  }
+
+  <span class="cm">// ③ Terminal position checks</span>
+  <span class="kw">if</span> (g.<span class="fn">in_checkmate</span>()) {
+    <span class="k">const</span> v <span class="op">=</span> maximising <span class="op">?</span> <span class="op">-</span><span class="nm">99999</span> <span class="op">:</span> <span class="nm">99999</span>;
+    <span class="fn">ttSet</span>(fen, depth, v); <span class="kw">return</span> v;
+  }
+  <span class="kw">if</span> (g.<span class="fn">in_draw</span>() <span class="op">||</span> g.<span class="fn">in_stalemate</span>()) {
+    <span class="fn">ttSet</span>(fen, depth, <span class="nm">0</span>); <span class="kw">return</span> <span class="nm">0</span>;
+  }
+
+  <span class="cm">// ④ Ordered move iteration</span>
+  <span class="k">const</span> moves <span class="op">=</span> <span class="fn">orderMoves</span>(g.<span class="fn">moves</span>({ verbose: <span class="k">true</span> }));
+  <span class="k">let</span> best <span class="op">=</span> maximising <span class="op">?</span> <span class="op">-</span><span class="tp">Infinity</span> <span class="op">:</span> <span class="tp">Infinity</span>;
+
+  <span class="kw">for</span> (<span class="k">const</span> m <span class="k">of</span> moves) {
+    g.<span class="fn">move</span>(m);
+    <span class="k">const</span> val <span class="op">=</span> <span class="fn">minimax</span>(g, depth<span class="op">-</span><span class="nm">1</span>, alpha, beta, <span class="op">!</span>maximising);
+    g.<span class="fn">undo</span>();
+
+    <span class="kw">if</span> (maximising) {
+      best  <span class="op">=</span> <span class="tp">Math</span>.<span class="fn">max</span>(best, val);
+      alpha <span class="op">=</span> <span class="tp">Math</span>.<span class="fn">max</span>(alpha, val);
+    } <span class="kw">else</span> {
+      best <span class="op">=</span> <span class="tp">Math</span>.<span class="fn">min</span>(best, val);
+      beta <span class="op">=</span> <span class="tp">Math</span>.<span class="fn">min</span>(beta, val);
+    }
+    <span class="cm">// ⑤ Alpha-beta cutoff (prune this branch)</span>
+    <span class="kw">if</span> (beta <span class="op">&lt;=</span> alpha) <span class="kw">break</span>;
+  }
+
+  <span class="fn">ttSet</span>(fen, depth, best);
+  <span class="kw">return</span> best;
+}</pre></div>
+        <div class="ann-note">
+          <div class="note-tag">Alpha-Beta explained</div>
+          <p><strong>alpha</strong> = best score the maximising player (White) can guarantee so far.<br/><strong>beta</strong> = best score the minimising player (Black) can guarantee so far.</p>
+          <p>When <code>beta ≤ alpha</code>, the current branch is <strong>pruned</strong>: the opponent already has a better option elsewhere, so they'd never let us reach this position.</p>
+          <ul>
+            <li>Step ① — reuse cached result if available</li>
+            <li>Step ② — at depth 0, resolve captures before evaluating</li>
+            <li>Step ③ — checkmate/draw are immediate returns</li>
+            <li>Step ④ — search best moves first (from MVV-LVA)</li>
+            <li>Step ⑤ — prune if this branch is irrelevant</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE: Levels -->
+  <div class="src-module" id="mod-levels">
+    <div class="src-module-head">
+      <div class="mod-icon">🏆</div>
+      <div class="mod-info">
+        <h2>Difficulty System</h2>
+        <p>Six levels with distinct characters. Lower levels introduce controlled randomness to simulate human error. Higher levels are pure engine play at increasing depths.</p>
+        <span class="mod-tag">engine.js</span>
+      </div>
+    </div>
+    <div class="src-body">
+      <div class="ann-block">
+        <div class="ann-code"><pre><span class="k">const</span> <span class="cn">LEVELS</span> <span class="op">=</span> {
+  novice:       { depth: <span class="nm">1</span>, rand: <span class="nm">0.70</span> },  <span class="cm">// 70% random</span>
+  beginner:     { depth: <span class="nm">2</span>, rand: <span class="nm">0.40</span> },  <span class="cm">// 40% random</span>
+  intermediate: { depth: <span class="nm">3</span>, rand: <span class="nm">0.12</span> },  <span class="cm">// 12% random</span>
+  expert:       { depth: <span class="nm">3</span>, rand: <span class="nm">0.00</span> },  <span class="cm">// pure engine</span>
+  master:       { depth: <span class="nm">4</span>, rand: <span class="nm">0.00</span> },  <span class="cm">// deeper search</span>
+  grandmaster:  { depth: <span class="nm">5</span>, rand: <span class="nm">0.00</span> },  <span class="cm">// elite depth</span>
+};
+
+<span class="k">function</span> <span class="fn">getBestMove</span>(g, lvl) {
+  <span class="k">const</span> cfg   <span class="op">=</span> <span class="cn">LEVELS</span>[lvl] <span class="op">||</span> <span class="cn">LEVELS</span>.intermediate;
+  <span class="k">const</span> moves <span class="op">=</span> g.<span class="fn">moves</span>({ verbose: <span class="k">true</span> });
+  <span class="kw">if</span> (<span class="op">!</span>moves.length) <span class="kw">return</span> <span class="k">null</span>;
+
+  <span class="cm">// Randomness injection for lower levels</span>
+  <span class="kw">if</span> (cfg.rand <span class="op">&gt;</span> <span class="nm">0</span> <span class="op">&amp;&amp;</span> <span class="tp">Math</span>.<span class="fn">random</span>() <span class="op">&lt;</span> cfg.rand)
+    <span class="kw">return</span> moves[<span class="tp">Math</span>.<span class="fn">floor</span>(<span class="tp">Math</span>.<span class="fn">random</span>() <span class="op">*</span> moves.length)];
+
+  <span class="cm">// Engine search for all other cases</span>
+  <span class="k">const</span> isW <span class="op">=</span> g.<span class="fn">turn</span>() <span class="op">===</span> <span class="st">'w'</span>;
+  <span class="k">let</span> best <span class="op">=</span> <span class="k">null</span>, bestVal <span class="op">=</span> isW <span class="op">?</span> <span class="op">-</span><span class="tp">Infinity</span> <span class="op">:</span> <span class="tp">Infinity</span>;
+
+  <span class="kw">for</span> (<span class="k">const</span> m <span class="k">of</span> <span class="fn">orderMoves</span>([...moves])) {
+    g.<span class="fn">move</span>(m);
+    <span class="k">const</span> val <span class="op">=</span> <span class="fn">minimax</span>(g, cfg.depth<span class="op">-</span><span class="nm">1</span>,
+                        <span class="op">-</span><span class="tp">Infinity</span>, <span class="tp">Infinity</span>, <span class="op">!</span>isW);
+    g.<span class="fn">undo</span>();
+    <span class="kw">if</span> (isW <span class="op">?</span> val <span class="op">&gt;</span> bestVal <span class="op">:</span> val <span class="op">&lt;</span> bestVal)
+      { bestVal <span class="op">=</span> val; best <span class="op">=</span> m; }
+  }
+  <span class="kw">return</span> best <span class="op">||</span> moves[<span class="nm">0</span>];
+}</pre></div>
+        <div class="ann-note">
+          <div class="note-tag">Design decision</div>
+          <p>Pure depth reduction (depth 1 vs 5) alone doesn't create a believable novice. A depth-1 engine still plays tactically sound, just short-sighted.</p>
+          <p><strong>Random injection</strong> creates realistic human-like blunders — missing a hanging piece, misplacing a knight — that make the game feel like a real beginner opponent.</p>
+          <p>Hints always use <strong>Expert-level</strong> evaluation (depth 3, no randomness) regardless of the current game difficulty.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE: UI -->
+  <div class="src-module" id="mod-ui">
+    <div class="src-module-head">
+      <div class="mod-icon">🎨</div>
+      <div class="mod-info">
+        <h2>UI &amp; Game Loop</h2>
+        <p>Connects the chess engine to the chessboard.js UI. Handles drag-drop moves, square highlights, move history, captured pieces, and the hint system.</p>
+        <span class="mod-tag">controller.js</span>
+      </div>
+    </div>
+    <div class="src-body">
+      <div class="ann-block">
+        <div class="ann-code"><pre><span class="cm">// ── Game Loop ──────────────────────────────────</span>
+<span class="k">function</span> <span class="fn">onDrop</span>(src, tgt) {
+  <span class="kw">if</span> (over <span class="op">||</span> g.<span class="fn">turn</span>() <span class="op">!==</span> <span class="st">'w'</span>) <span class="kw">return</span> <span class="st">'snapback'</span>;
+  <span class="fn">clearHL</span>();
+
+  <span class="cm">// Validate and apply the human's move</span>
+  <span class="k">const</span> mv <span class="op">=</span> g.<span class="fn">move</span>({ from: src, to: tgt, promotion: <span class="st">'q'</span> });
+  <span class="kw">if</span> (<span class="op">!</span>mv) <span class="kw">return</span> <span class="st">'snapback'</span>;  <span class="cm">// illegal move</span>
+
+  <span class="fn">markLastMove</span>(); <span class="fn">markCheck</span>();
+  <span class="fn">refreshStatus</span>(); <span class="fn">refreshMoves</span>(); <span class="fn">refreshCaptured</span>();
+
+  <span class="cm">// Trigger engine response on next tick</span>
+  <span class="kw">if</span> (<span class="op">!</span>g.<span class="fn">game_over</span>()) <span class="fn">engineMove</span>();
+  <span class="kw">else</span> { <span class="fn">refreshStatus</span>(); <span class="fn">endGame</span>(); }
+}
+
+<span class="cm">// ── Hint System ────────────────────────────────</span>
+<span class="k">function</span> <span class="fn">doHint</span>() {
+  <span class="kw">if</span> (hints <span class="op">&lt;=</span> <span class="nm">0</span> <span class="op">||</span> over <span class="op">||</span> g.<span class="fn">turn</span>() <span class="op">!==</span> <span class="st">'w'</span>) <span class="kw">return</span>;
+  hints<span class="op">--</span>; <span class="fn">refreshHints</span>(); <span class="fn">clearHL</span>();
+
+  <span class="cm">// Always use expert evaluation for hints</span>
+  <span class="k">const</span> hint <span class="op">=</span> <span class="fn">getBestMove</span>(g, <span class="st">'expert'</span>);
+  <span class="kw">if</span> (<span class="op">!</span>hint) <span class="kw">return</span>;
+
+  <span class="cm">// Highlight from-square (light green) and to-square (bright green)</span>
+  <span class="fn">hlSq</span>(hint.from, <span class="st">'sq-hint-from'</span>);
+  <span class="fn">hlSq</span>(hint.to,   <span class="st">'sq-hint-to'</span>);
+  <span class="fn">setStatus</span>(<span class="st">`Hint: Consider ${hint.from} → ${hint.to} (${hint.san})`</span>);
+
+  <span class="cm">// Auto-clear hint highlight after 3.5 seconds</span>
+  hintTimer <span class="op">=</span> <span class="fn">setTimeout</span>(() <span class="op">=&gt;</span> {
+    <span class="fn">clearHL</span>(); <span class="fn">markLastMove</span>(); <span class="fn">refreshStatus</span>();
+  }, <span class="nm">3500</span>);
+}</pre></div>
+        <div class="ann-note">
+          <div class="note-tag">Architecture</div>
+          <p>The game loop is <strong>event-driven</strong>: the human drops a piece → <code>onDrop</code> fires → engine response is deferred with <code>setTimeout(60ms)</code> to let the browser repaint first.</p>
+          <p>All UI state is derived from the <code>chess.js</code> game object <code>g</code> — never stored separately. This means the UI can never get out of sync with the game state.</p>
+          <p>The hint system consumes from a fixed pool of 6 per game. Each hint costs one pip, and the button disables when the pool is empty or it's the engine's turn.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section><!-- /panel-source -->
+
+
+<!-- ══════════════════════════════════════════════
+     CHESS ENGINE SCRIPT
+══════════════════════════════════════════════ -->
+<script>
+/* ─── PIECE VALUES ───────────────────────────── */
+const PV = { p:100, n:320, b:330, r:500, q:900, k:20000 };
+
+/* ─── PIECE-SQUARE TABLES ────────────────────── */
+const PST = {
+  p:[  0,  0,  0,  0,  0,  0,  0,  0,
+      50, 50, 50, 50, 50, 50, 50, 50,
+      10, 10, 20, 30, 30, 20, 10, 10,
+       5,  5, 10, 25, 25, 10,  5,  5,
+       0,  0,  0, 20, 20,  0,  0,  0,
+       5, -5,-10,  0,  0,-10, -5,  5,
+       5, 10, 10,-20,-20, 10, 10,  5,
+       0,  0,  0,  0,  0,  0,  0,  0 ],
+  n:[-50,-40,-30,-30,-30,-30,-40,-50,
+     -40,-20,  0,  0,  0,  0,-20,-40,
+     -30,  0, 10, 15, 15, 10,  0,-30,
+     -30,  5, 15, 20, 20, 15,  5,-30,
+     -30,  0, 15, 20, 20, 15,  0,-30,
+     -30,  5, 10, 15, 15, 10,  5,-30,
+     -40,-20,  0,  5,  5,  0,-20,-40,
+     -50,-40,-30,-30,-30,-30,-40,-50 ],
+  b:[-20,-10,-10,-10,-10,-10,-10,-20,
+     -10,  0,  0,  0,  0,  0,  0,-10,
+     -10,  0,  5, 10, 10,  5,  0,-10,
+     -10,  5,  5, 10, 10,  5,  5,-10,
+     -10,  0, 10, 10, 10, 10,  0,-10,
+     -10, 10, 10, 10, 10, 10, 10,-10,
+     -10,  5,  0,  0,  0,  0,  5,-10,
+     -20,-10,-10,-10,-10,-10,-10,-20 ],
+  r:[  0,  0,  0,  0,  0,  0,  0,  0,
+       5, 10, 10, 10, 10, 10, 10,  5,
+      -5,  0,  0,  0,  0,  0,  0, -5,
+      -5,  0,  0,  0,  0,  0,  0, -5,
+      -5,  0,  0,  0,  0,  0,  0, -5,
+      -5,  0,  0,  0,  0,  0,  0, -5,
+      -5,  0,  0,  0,  0,  0,  0, -5,
+       0,  0,  0,  5,  5,  0,  0,  0 ],
+  q:[-20,-10,-10, -5, -5,-10,-10,-20,
+     -10,  0,  0,  0,  0,  0,  0,-10,
+     -10,  0,  5,  5,  5,  5,  0,-10,
+      -5,  0,  5,  5,  5,  5,  0, -5,
+       0,  0,  5,  5,  5,  5,  0, -5,
+     -10,  5,  5,  5,  5,  5,  0,-10,
+     -10,  0,  5,  0,  0,  0,  0,-10,
+     -20,-10,-10, -5, -5,-10,-10,-20 ],
+  k:[-30,-40,-40,-50,-50,-40,-40,-30,
+     -30,-40,-40,-50,-50,-40,-40,-30,
+     -30,-40,-40,-50,-50,-40,-40,-30,
+     -30,-40,-40,-50,-50,-40,-40,-30,
+     -20,-30,-30,-40,-40,-30,-30,-20,
+     -10,-20,-20,-20,-20,-20,-20,-10,
+      20, 20,  0,  0,  0,  0, 20, 20,
+      20, 30, 10,  0,  0, 10, 30, 20 ]
+};
+
+/* ─── EVALUATION ─────────────────────────────── */
+function evaluate(g) {
+  if (g.in_checkmate()) return g.turn() === 'w' ? -99999 : 99999;
+  if (g.in_draw() || g.in_stalemate() || g.in_threefold_repetition()) return 0;
+  let score = 0;
+  const bd = g.board();
+  for (let r = 0; r < 8; r++)
+    for (let c = 0; c < 8; c++) {
+      const p = bd[r][c];
+      if (!p) continue;
+      const base = PV[p.type] || 0;
+      const tbl  = PST[p.type];
+      const idx  = p.color === 'w' ? (7-r)*8+c : r*8+c;
+      const pst  = tbl ? tbl[idx] : 0;
+      score += p.color === 'w' ? (base+pst) : -(base+pst);
+    }
+  return score;
+}
+
+/* ─── TRANSPOSITION TABLE ────────────────────── */
+const TT     = new Map();
+const TT_MAX = 80000;
+function ttGet(fen, depth) { const e=TT.get(fen); return (e&&e.d>=depth)?e.v:null; }
+function ttSet(fen, depth, val) {
+  if (TT.size >= TT_MAX) TT.delete(TT.keys().next().value);
+  TT.set(fen, { d:depth, v:val });
+}
+
+/* ─── MOVE ORDERING ──────────────────────────── */
+function mvvlva(m) {
+  let s = 0;
+  if (m.captured) s += 10*(PV[m.captured]||0) - (PV[m.piece]||0);
+  if (m.flags && m.flags.includes('p')) s += 800;
+  if (m.san  && m.san.includes('+'))   s +=  50;
+  return s;
+}
+function orderMoves(moves) { return moves.sort((a,b) => mvvlva(b)-mvvlva(a)); }
+
+/* ─── QUIESCENCE SEARCH ──────────────────────── */
+function qSearch(g, alpha, beta, ply) {
+  const stand = evaluate(g);
+  if (stand >= beta)  return beta;
+  if (stand > alpha)  alpha = stand;
+  if (ply > 5)        return alpha;
+  const caps = orderMoves(g.moves({verbose:true}).filter(m => m.captured));
+  for (const m of caps) {
+    g.move(m);
+    const sc = -qSearch(g, -beta, -alpha, ply+1);
+    g.undo();
+    if (sc >= beta)  return beta;
+    if (sc > alpha)  alpha = sc;
+  }
+  return alpha;
+}
+
+/* ─── ALPHA-BETA MINIMAX ─────────────────────── */
+function minimax(g, depth, alpha, beta, maximising) {
+  const fen = g.fen();
+  const hit = ttGet(fen, depth);
+  if (hit !== null) return hit;
+  if (depth === 0) { const v=qSearch(g,alpha,beta,0); ttSet(fen,0,v); return v; }
+  if (g.in_checkmate()) { const v=maximising?-99999:99999; ttSet(fen,depth,v); return v; }
+  if (g.in_draw()||g.in_stalemate()) { ttSet(fen,depth,0); return 0; }
+
+  const moves = orderMoves(g.moves({verbose:true}));
+  let best = maximising ? -Infinity : Infinity;
+  for (const m of moves) {
+    g.move(m);
+    const val = minimax(g, depth-1, alpha, beta, !maximising);
+    g.undo();
+    if (maximising) { best=Math.max(best,val); alpha=Math.max(alpha,val); }
+    else            { best=Math.min(best,val); beta =Math.min(beta, val); }
+    if (beta <= alpha) break;
+  }
+  ttSet(fen, depth, best);
+  return best;
+}
+
+/* ─── DIFFICULTY LEVELS ──────────────────────── */
+const LEVELS = {
+  novice:       { depth:1, rand:0.70 },
+  beginner:     { depth:2, rand:0.40 },
+  intermediate: { depth:3, rand:0.12 },
+  expert:       { depth:3, rand:0.00 },
+  master:       { depth:4, rand:0.00 },
+  grandmaster:  { depth:5, rand:0.00 },
+};
+
+function getBestMove(g, lvl) {
+  const cfg   = LEVELS[lvl] || LEVELS.intermediate;
+  const moves = g.moves({verbose:true});
+  if (!moves.length) return null;
+  if (cfg.rand > 0 && Math.random() < cfg.rand)
+    return moves[Math.floor(Math.random()*moves.length)];
+  const isW = g.turn() === 'w';
+  let best = null, bestVal = isW ? -Infinity : Infinity;
+  for (const m of orderMoves([...moves])) {
+    g.move(m);
+    const val = minimax(g, cfg.depth-1, -Infinity, Infinity, !isW);
+    g.undo();
+    if (isW ? val > bestVal : val < bestVal) { bestVal=val; best=m; }
+  }
+  return best || moves[0];
+}
+
+/* ─── GAME STATE ─────────────────────────────── */
+let g       = new Chess();
+let board   = null;
+let level   = 'novice';
+let hints   = 6;
+let over    = false;
+let hintTimer;
+const SYMS  = {wp:'♙',wn:'♘',wb:'♗',wr:'♖',wq:'♕',wk:'♔',bp:'♟',bn:'♞',bb:'♝',br:'♜',bq:'♛',bk:'♚'};
+
+/* ─── BOARD HELPERS ──────────────────────────── */
+function clearHL() { $('#board .square-55d63').removeClass('sq-hint-from sq-hint-to sq-last-from sq-last-to sq-check'); }
+function hlSq(sq, cls) { $('#board .square-'+sq).addClass(cls); }
+function markLastMove() {
+  const h = g.history({verbose:true});
+  if (!h.length) return;
+  const m = h[h.length-1];
+  hlSq(m.from,'sq-last-from'); hlSq(m.to,'sq-last-to');
+}
+function markCheck() {
+  if (!g.in_check()) return;
+  const bd = g.board();
+  for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+    const p = bd[r][c];
+    if (p && p.type==='k' && p.color===g.turn())
+      hlSq('abcdefgh'[c]+(8-r),'sq-check');
+  }
+}
+
+/* ─── UI UPDATES ─────────────────────────────── */
+function setStatus(html) { document.getElementById('statusText').innerHTML = html; }
+function setThinking(on) { document.getElementById('thinkRow').classList.toggle('on',on); }
+
+function refreshStatus() {
+  const dot   = document.getElementById('turnDot');
+  const label = document.getElementById('turnLabel');
+  if (g.in_checkmate()) {
+    const w = g.turn()==='b'?'White':'Black';
+    setStatus(`<span class="bad">Checkmate! ${w} wins. 🏆</span>`);
+    label.textContent='Game over'; dot.classList.remove('pulse'); dot.style.background='#e05555';
+    over=true; refreshHints(); return;
+  }
+  if (g.in_draw())                { setStatus('<span class="ok">Draw</span> — fifty-move rule.');           endGame(); return; }
+  if (g.in_stalemate())           { setStatus('<span class="ok">Stalemate!</span> It\'s a draw.');          endGame(); return; }
+  if (g.in_threefold_repetition()){ setStatus('<span class="ok">Draw</span> — threefold repetition.');      endGame(); return; }
+  if (g.in_check()) {
+    setStatus(`<span class="bad">Check!</span> ${g.turn()==='w'?'White':'Black'} must respond.`);
+  } else {
+    setStatus(g.turn()==='w'?'<span class="ok">Your turn</span> — White to move.':'Engine is calculating…');
+  }
+  if (g.turn()==='w') {
+    label.textContent='Your turn — playing as White';
+    dot.style.background='var(--gold)'; dot.classList.add('pulse');
+  } else {
+    label.textContent='Engine is thinking…';
+    dot.style.background='#e05555'; dot.classList.remove('pulse');
+  }
+}
+function endGame() {
+  over=true;
+  const dot=document.getElementById('turnDot');
+  dot.classList.remove('pulse');
+  document.getElementById('turnLabel').textContent='Game over';
+  refreshHints();
+}
+function refreshMoves() {
+  const h=g.history(); const el=document.getElementById('moveList'); let html='';
+  for (let i=0;i<h.length;i+=2)
+    html+=`<div class="mv-row"><span class="n">${Math.floor(i/2)+1}.</span><span class="w">${h[i]||''}</span><span class="b">${h[i+1]||''}</span></div>`;
+  el.innerHTML=html; el.scrollTop=el.scrollHeight;
+}
+function refreshCaptured() {
+  const h=g.history({verbose:true}); const cW=[],cB=[];
+  for (const m of h) {
+    if (!m.captured) continue;
+    const sym=SYMS[(m.color==='w'?'b':'w')+m.captured]||'?';
+    if (m.color==='w') cW.push(sym); else cB.push(sym);
+  }
+  document.getElementById('capW').textContent=cW.join('');
+  document.getElementById('capB').textContent=cB.join('');
+}
+function refreshHints() {
+  document.querySelectorAll('#pipRow .pip').forEach((p,i)=>p.classList.toggle('off',i>=hints));
+  document.getElementById('hintBtn').disabled = hints<=0||over||g.turn()!=='w';
+}
+
+/* ─── ENGINE MOVE ────────────────────────────── */
+function engineMove() {
+  if (over||g.game_over()) return;
+  setThinking(true);
+  document.getElementById('hintBtn').disabled=true;
+  setTimeout(()=>{
+    const best=getBestMove(g,level);
+    if (best) { g.move(best); board.position(g.fen()); clearHL(); markLastMove(); markCheck(); }
+    setThinking(false); refreshStatus(); refreshMoves(); refreshCaptured(); refreshHints();
+  }, 60);
+}
+
+/* ─── DROP HANDLER ───────────────────────────── */
+function onDrop(src,tgt) {
+  if (over||g.turn()!=='w') return 'snapback';
+  clearHL();
+  const mv=g.move({from:src,to:tgt,promotion:'q'});
+  if (!mv) return 'snapback';
+  markLastMove(); markCheck(); refreshStatus(); refreshMoves(); refreshCaptured();
+  if (!g.game_over()) engineMove(); else { refreshStatus(); endGame(); }
+}
+function onSnapEnd() { board.position(g.fen()); }
+
+/* ─── HINT ───────────────────────────────────── */
+function doHint() {
+  if (hints<=0||over||g.turn()!=='w') return;
+  hints--; refreshHints(); clearHL();
+  const hint=getBestMove(g,'expert');
+  if (!hint) return;
+  hlSq(hint.from,'sq-hint-from'); hlSq(hint.to,'sq-hint-to');
+  setStatus(`<span class="ok">Hint:</span> Consider <b>${hint.from}</b> → <b>${hint.to}</b>&nbsp;(${hint.san})`);
+  if (hintTimer) clearTimeout(hintTimer);
+  hintTimer=setTimeout(()=>{ clearHL(); markLastMove(); refreshStatus(); },3500);
+}
+
+/* ─── NEW GAME ───────────────────────────────── */
+function newGame() {
+  g=new Chess(); TT.clear(); hints=6; over=false;
+  if (hintTimer) clearTimeout(hintTimer);
+  board.start(); clearHL(); setThinking(false);
+  document.getElementById('moveList').innerHTML='';
+  document.getElementById('capW').textContent='';
+  document.getElementById('capB').textContent='';
+  setStatus('Game ready. Make your first move.');
+  document.getElementById('turnLabel').textContent='Your turn — playing as White';
+  const dot=document.getElementById('turnDot');
+  dot.style.background='var(--gold)'; dot.classList.add('pulse');
+  refreshHints();
+}
+
+/* ─── LEVEL SELECT ───────────────────────────── */
+document.getElementById('lvlGrid').addEventListener('click', e => {
+  const btn=e.target.closest('.lvl-btn');
+  if (!btn) return;
+  level=btn.dataset.lvl;
+  document.querySelectorAll('.lvl-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+});
+
+/* ─── TAB SWITCHING ──────────────────────────── */
+function switchTab(id) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.getElementById('tb-'+id).classList.add('active');
+}
+
+/* ─── INIT ───────────────────────────────────── */
+$(document).ready(function () {
+  // Activate game panel first
+  document.getElementById('panel-game').classList.add('active');
+
+  board = Chessboard('board', {
+    draggable:     true,
+    position:      'start',
+    onDrop:        onDrop,
+    onSnapEnd:     onSnapEnd,
+    pieceTheme:    'https://cdnjs.cloudflare.com/ajax/libs/chessboard.js/1.0.0/img/chesspieces/wikipedia/{piece}.png',
+    snapbackSpeed: 250,
+    snapSpeed:     80,
+  });
+  refreshHints();
+  refreshStatus();
+});
+</script>
+</body>
 </html>
